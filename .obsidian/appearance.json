@@ -1,3 +1,6 @@
 {
-  "cssTheme": "GitHub Theme"
+  "cssTheme": "GitHub Theme",
+  "accentColor": "",
+  "textFontFamily": "Calibri",
+  "theme": "moonstone"
 }

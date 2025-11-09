@@ -11,10 +11,14 @@
             "id": "b6f91163b9be82e6",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "Learning/Python/Map() & Filter() Functions.md",
+                "mode": "preview",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Map() & Filter() Functions"
             }
           }
         ]
@@ -49,7 +53,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "tag:#Concept/AccessByReferenceBehavior",
+                "query": "tag:#LazyEvaluation",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -70,7 +74,8 @@
               "title": "Bookmarks"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
@@ -165,9 +170,14 @@
       "bases:Create new base": false
     }
   },
-  "active": "1d82d7ef5dc36259",
+  "active": "f4ed2532d42e8e7a",
   "lastOpenFiles": [
+    "Learning/Python/Error Handling.md",
+    "Learning/Python/Map() & Filter() Functions.md",
     "Learning/Python/Access by Reference.md",
+    "Learning/Python/Call by sharing.md",
+    "Jupyter.ipynb",
+    "Jupyter.ipnty",
     "Projects/devops-pipeline.md",
     "Vibe-Coding Playground/shark-simulator.md",
     "Vibe-Coding Playground/Farsi Word Builder.md",
