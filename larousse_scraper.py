@@ -3,13 +3,19 @@ import re
 import sys
 import pathlib
 import requests
+import threading
+import tkinter as tk
+from tkinter import scrolledtext
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
+from unidecode import unidecode # <-- NEW IMPORT
 
 # -------- Configuration --------
 ROOT_DIR = pathlib.Path("Learning/French/Larousse")
 BASE_URL = "https://www.larousse.fr"
+
+# --- Helper Functions (No changes) ---
 
 def ensure_paths(word: str):
     """Sets up the directory structure for the word."""
@@ -51,33 +57,50 @@ def download_asset(url: str, out_path: pathlib.Path) -> bool:
 def get_local_path(url: str, asset_dir: pathlib.Path, prefix: str = "", idx: int = 0) -> pathlib.Path:
     """Creates a predictable local file path for a downloaded asset."""
     try:
-        # Try to get the original filename
         parsed_name = pathlib.Path(urlparse(url).path).name
-        if not parsed_name:
-            # If no name, create one
-            ext = ".css" if "css" in asset_dir.name else ".js" if "js" in asset_dir.name else ".mp3"
-            parsed_name = f"{prefix}_{idx}{ext}"
+        if not parsed_name or len(parsed_name) > 100: 
+             ext_map = { 'css': '.css', 'js': '.js', 'audio': '.mp3' }
+             ext = ext_map.get(asset_dir.name, '.asset')
+             parsed_name = f"{prefix}_{idx}{ext}"
         return asset_dir / parsed_name
     except Exception:
-        # Fallback
         return asset_dir / f"{prefix}_{idx}.asset"
+
+# --- Core Scraping Logic (Updated) ---
 
 def scrape_larousse(word_or_url: str):
     """
     Scrapes the Larousse entry, preserving original HTML structure
     and rewriting asset links to be local.
     """
-    word = pathlib.Path(word_or_url).stem
+    
+    # --- NEW: Sanitize the word for file paths ---
+    # 1. Get the original word (stem)
+    if word_or_url.startswith("http"):
+        raw_word = pathlib.Path(urlparse(word_or_url).path).stem
+    else:
+        raw_word = word_or_url
+        
+    if not raw_word:
+        raw_word = "entry"
+    
+    # 2. Create a "sanitized" version for file/directory names
+    word = unidecode(raw_word)
+    
+    # 3. Use the sanitized 'word' for paths
     word_dir, audio_dir, css_dir, js_dir = ensure_paths(word)
+    
+    # 4. Use the original 'word_or_url' to build the fetch URL
     url = build_url(word_or_url)
     
-    print(f"[info] Scraping {word} from {url}")
+    print(f"[info] Scraping '{raw_word}' from {url}")
+    print(f"[info] Saving to directory: {word_dir}")
+    # --- End of sanitation changes ---
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-            # Increase timeout just in case
             page.goto(url, wait_until="networkidle", timeout=60000)
             html = page.content()
             browser.close()
@@ -87,61 +110,61 @@ def scrape_larousse(word_or_url: str):
 
     soup = BeautifulSoup(html, "html.parser")
     
-    # --- Find the main article content ---
     article = soup.find("article", class_="article_bilingue") or \
               soup.find("div", class_="content fr-en") or \
               soup.find("article")
 
     if article is None:
-        out_html = word_dir / f"{word}.html"
-        out_html.write_text(
-            f"<!DOCTYPE html><html><body><p>No article found for '{word_or_url}'.</p></body></html>",
-            encoding="utf-8",
-        )
-        print(f"[info] No article found. Wrote placeholder: {out_html}")
+        print(f"[info] No article found for '{word_or_url}'.")
         return
 
-    # --- 1. Process CSS files ---
+    print("[info] Removing internal links...")
+    for a_tag in article.find_all('a'):
+        a_tag.name = "span" 
+        if a_tag.has_attr('href'):
+            del a_tag['href']
+        if a_tag.has_attr('target'):
+            del a_tag['target']
+    
     print("[info] Downloading CSS...")
     css_files_found = 0
     for idx, link in enumerate(soup.find_all('link', rel='stylesheet')):
         if link.get('href'):
             orig_href = absolute_url(link['href'])
             local_path = get_local_path(orig_href, css_dir, "style", idx)
+            
             if download_asset(orig_href, local_path):
-                # Rewrite the link to point to the local file
                 link['href'] = os.path.relpath(local_path, word_dir)
                 css_files_found += 1
+            else:
+                link.decompose()
     
-    # --- 2. Process JS files ---
     print("[info] Downloading JS...")
     js_files_found = 0
     for idx, script in enumerate(soup.find_all('script')):
         if script.get('src'):
             orig_src = absolute_url(script['src'])
             local_path = get_local_path(orig_src, js_dir, "script", idx)
+            
             if download_asset(orig_src, local_path):
-                # Rewrite the link to point to the local file
                 script['src'] = os.path.relpath(local_path, word_dir)
                 js_files_found += 1
+            else:
+                script.decompose()
     
-    # --- 3. Process Audio files ---
     print("[info] Downloading Audio...")
     audio_files_found = 0
-    for idx, audio in enumerate(soup.find_all('audio')):
+    for idx, audio in enumerate(article.find_all('audio')): 
         if audio.get('src'):
             orig_src = absolute_url(audio['src'])
             local_path = get_local_path(orig_src, audio_dir, word, idx)
+            
             if download_asset(orig_src, local_path):
-                # Rewrite the link to point to the local file
                 audio['src'] = os.path.relpath(local_path, word_dir)
                 audio_files_found += 1
+            else:
+                audio.decompose()
 
-    # --- 4. Create Final HTML ---
-    # We create a new, clean HTML document containing just the
-    # downloaded assets in the <head> and the isolated <article>
-    # in the <body>. This removes all the extra site navigation, ads, etc.
-    
     title = soup.find("title").string or f"Entry for {word}"
     
     final_html = f"""<!DOCTYPE html>
@@ -151,36 +174,97 @@ def scrape_larousse(word_or_url: str):
   <title>{title}</title>
   {os.linesep.join(str(link) for link in soup.head.find_all('link', rel='stylesheet'))}
   <style>
-    /* Add simple body margin for better viewing */
-    body {{ margin: 24px; }}
+    body {{ margin: 24px; background: #fff; }}
   </style>
 </head>
 <body>
   {str(article)}
-  
   {os.linesep.join(str(script) for script in soup.find_all('script') if script.get('src'))}
 </body>
 </html>"""
 
+    # Use the sanitized 'word' for the output filename
     out_html = word_dir / f"{word}.html"
     out_html.write_text(final_html, encoding="utf-8")
 
     print(f"\n[done] Saved: {out_html}")
-    print(f"[done] Audio: {audio_files_found} file(s) in {audio_dir}")
-    print(f"[done] CSS: {css_files_found} file(s) in {css_dir}")
-    print(f"[done] JS: {js_files_found} file(s) in {js_dir}")
+    print(f"[done] Audio: {audio_files_found} file(s)")
+    print(f"[done] CSS: {css_files_found} file(s)")
+    print(f"[done] JS: {js_files_found} file(s)")
+    print("-" * 30)
 
+# -------- Simple Tkinter UI (No changes) --------
 
-# -------- Entry point --------
+class TextRedirector:
+    """Redirects stdout to a tkinter Text widget"""
+    def __init__(self, widget):
+        self.widget = widget
+
+    def write(self, s):
+        self.widget.configure(state='normal')
+        self.widget.insert('end', s)
+        self.widget.see('end')
+        self.widget.configure(state='disabled')
+
+    def flush(self):
+        pass 
+
+def start_scrape_thread(entry_widget):
+    """Starts the scraping process in a separate thread"""
+    url_or_word = entry_widget.get()
+    if not url_or_word:
+        print("[error] Please enter a word or URL.\n")
+        return
+    
+    scrape_button.config(state="disabled")
+    
+    def scrape_task():
+        try:
+            scrape_larousse(url_or_word)
+        except Exception as e:
+            print(f"[error] An unexpected error occurred: {e}\n")
+        finally:
+            scrape_button.config(state="normal")
+            
+    thread = threading.Thread(target=scrape_task)
+    thread.daemon = True 
+    thread.start()
+
+# --- Main Entry Point ---
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python larousse_scraper.py <word_or_url>")
-        print("Example: python larousse_scraper.py chat")
-        print("Example: python larousse_scraper.py https://www.larousse.fr/dictionnaires/francais-anglais/chat/14765")
-        sys.exit(1)
-    
-    # Ensure dependencies are installed
-    print("Please ensure you have run: pip install playwright beautifulsoup4 requests")
+    print("Starting Scraper UI...")
+    print("Please ensure you have run: pip install playwright beautifulsoup4 requests unidecode")
     print("And installed browsers: playwright install")
+    print("-" * 30)
     
-    scrape_larousse(sys.argv[1])
+    root = tk.Tk()
+    root.title("Larousse Scraper")
+    root.geometry("600x400")
+
+    main_frame = tk.Frame(root, padx=10, pady=10)
+    main_frame.pack(fill="both", expand=True)
+
+    input_frame = tk.Frame(main_frame)
+    input_frame.pack(fill="x")
+
+    tk.Label(input_frame, text="Word or URL:").pack(side="left", padx=(0, 5))
+    
+    url_entry = tk.Entry(input_frame, width=50)
+    url_entry.pack(side="left", fill="x", expand=True)
+
+    scrape_button = tk.Button(input_frame, text="Scrape", 
+                              command=lambda: start_scrape_thread(url_entry))
+    scrape_button.pack(side="left", padx=(5, 0))
+
+    tk.Label(main_frame, text="Log Output:", anchor="w").pack(fill="x", pady=(10, 5))
+    
+    console_output = scrolledtext.ScrolledText(main_frame, height=15, state='disabled')
+    console_output.pack(fill="both", expand=True)
+
+    sys.stdout = TextRedirector(console_output)
+    sys.stderr = TextRedirector(console_output)
+
+    print("Ready. Enter a word (e.g., 'chat') or a full URL.")
+    
+    root.mainloop()
