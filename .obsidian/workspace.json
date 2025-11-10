@@ -11,14 +11,10 @@
             "id": "b6f91163b9be82e6",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Learning/Python/Map() & Filter() Functions.md",
-                "mode": "preview",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "Map() & Filter() Functions"
+              "title": "New tab"
             }
           }
         ]
@@ -74,8 +70,7 @@
               "title": "Bookmarks"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "horizontal",
@@ -170,14 +165,35 @@
       "bases:Create new base": false
     }
   },
-  "active": "f4ed2532d42e8e7a",
+  "active": "b6f91163b9be82e6",
   "lastOpenFiles": [
-    "Learning/Python/Error Handling.md",
+    "Learning/French/Larousse/maladie/maladie.html",
+    "Learning/French/Larousse/maladie/audio/206789ang2",
+    "Learning/French/Larousse/maladie/audio/252250fra2",
+    "Learning/French/Larousse/maladie/audio/190733ang2",
+    "Learning/French/Larousse/maladie/audio/7414fra2",
+    "Learning/French/Larousse/maladie/audio/206788ang2",
+    "Learning/French/Larousse/maladie/audio/252249fra2",
+    "Learning/French/Larousse/maladie/audio/37748ang2",
+    "Learning/French/Larousse/maladie/audio/206787ang2",
+    "Learning/French/Larousse/maladie/audio/252248fra2",
+    "Learning/French/Larousse/maladie/audio/24519ang2",
+    "Learning/French/Larousse/angry/images/slick.png",
+    "Learning/French/Larousse/angry/images/ajax-loader.png",
+    "Learning/French/Larousse/angry/images/glyphicons-halflings-regular.png",
+    "Learning/French/Larousse/ship/images/slick.png",
+    "Learning/French/Larousse/ship/images/ajax-loader.png",
+    "Learning/French/Larousse/ship/images/glyphicons-halflings-regular.png",
+    "Learning/French/Larousse/reveiller/images/slick.svg",
+    "Learning/French/Larousse/reveiller/images/ajax-loader.gif",
+    "Learning/French/Larousse/reveiller/images/glyphicons-halflings-regular.svg",
+    "Learning/French/Larousse/reveiller/images/slick.png",
+    "Learning/French/Larousse/14765/Untitled.md",
+    "Learning/French/Larousse words/chat/chat.md",
     "Learning/Python/Map() & Filter() Functions.md",
+    "Learning/Python/Error Handling.md",
     "Learning/Python/Access by Reference.md",
     "Learning/Python/Call by sharing.md",
-    "Jupyter.ipynb",
-    "Jupyter.ipnty",
     "Projects/devops-pipeline.md",
     "Vibe-Coding Playground/shark-simulator.md",
     "Vibe-Coding Playground/Farsi Word Builder.md",
